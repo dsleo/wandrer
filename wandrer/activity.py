@@ -107,7 +107,14 @@ class Activity:
                     if len(remainder_seg) > 0:
                         remainder_segments.append(remainder_seg)
 
-        self.new_segments=remainder_segments
-        self.shared_segments=shared_segments 
+        self.new_path_segments=remainder_segments
+        self.shared_path_segments=shared_segments 
 
-        return self.new_segments
+        return self.new_path_segments
+
+    def get_new_strava_segments(self, history: HistoricalActivities):
+        self.new_strava_segments = []
+        for seg in self.strava_segments:
+            if seg not in history.strava_segments:
+                self.new_strava_segments.append(seg)
+        return self.new_strava_segments
