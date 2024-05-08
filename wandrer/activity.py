@@ -48,7 +48,7 @@ class HistoricalActivities():
                     self.strava_segments.append(tuple(segment))
                     existing_segments.add(segment_key)
     
-    def index(self):
+    def index(self) -> BallTree:
         midpoints = np.array([[np.deg2rad(lat), np.deg2rad(lon)] for lat, lon in self.midpoints_np])
         self.tree_index = BallTree(midpoints, metric='haversine')
         return self.tree_index
@@ -74,9 +74,9 @@ class Activity:
         #WOULD BE NICE TO NOT do strava_client.client
         activity_data = self.strava_client.client.get_activity_streams(self.activity_id, types=self.types)
         if 'latlng' in activity_data.keys():
-            coords=(activity_data['latlng'].data[:])
+            coords=round_coordinates(activity_data['latlng'].data[:])
             dists = (activity_data['distance'].data[:])
-            coords = round_coordinates(coords)
+
             sampled_coords = sample_coords_by_distance(coords, dists, sampling_interval=sampling_interval)
 
             self.path_segments = [(tuple(sampled_coords[i]), tuple(sampled_coords[i+1])) for i in range(len(sampled_coords)-1)]
@@ -113,8 +113,5 @@ class Activity:
         return self.new_path_segments
 
     def get_new_strava_segments(self, history: HistoricalActivities):
-        self.new_strava_segments = []
-        for seg in self.strava_segments:
-            if seg not in history.strava_segments:
-                self.new_strava_segments.append(seg)
-        return self.new_strava_segments
+        new_strava_segments = [seg for seg in self.strava_segments if seg not in history.strava_segments]
+        return new_strava_segments
