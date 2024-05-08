@@ -14,11 +14,11 @@ class HistoricalActivities():
         self.strava_client = strava_client
         self.types = types or ['latlng', 'distance']
         self.path_segments = []
+        self.strava_segments = []
         self.midpoints = []
 
     def fetch_path_segments(self, sampling_interval: int = 500,limit: int = 10) -> Tuple[np.ndarray, np.ndarray]:
         activities = list(itertools.islice(self.strava_client.get_activities(), limit))
-
         existing_segments = set()
         for activity in activities:
             activity = Activity(strava_client=self.strava_client, activity_id=activity.id, types=self.types)
@@ -35,10 +35,22 @@ class HistoricalActivities():
         self.path_segments_np = np.array(self.path_segments)
         self.midpoints_np= np.array([(mp[0], mp[1]) for mp in self.midpoints])
 
+    def fetch_strava_segments(self, limit: int = 10):
+        activities = list(itertools.islice(self.strava_client.get_activities(), limit))
+        existing_segments = set()
+        for activity in activities:
+            activity = Activity(strava_client=self.strava_client, activity_id=activity.id, types=self.types)
+            activity.fetch_strava_segments()
+
+            for segment in activity.strava_segments:
+                segment_key = tuple(sorted(segment))
+                if segment_key not in existing_segments:
+                    self.strava_segments.append(tuple(segment))
+                    existing_segments.add(segment_key)
+    
     def index(self):
         midpoints = np.array([[np.deg2rad(lat), np.deg2rad(lon)] for lat, lon in self.midpoints_np])
         self.tree_index = BallTree(midpoints, metric='haversine')
-
         return self.tree_index
 
 class Activity:
