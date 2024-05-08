@@ -5,13 +5,12 @@ from functools import partial
 from shapely.geometry import LineString
 from sklearn.neighbors import BallTree
 
-import sys
-sys.path.append('.')
 import itertools
-from utils import round_coordinates, sample_coords_by_distance, calculate_midpoint, segment_intersection, segment_length, complementary_region
+from wandrer.utils import round_coordinates, sample_coords_by_distance, calculate_midpoint, segment_intersection, segment_length, complementary_region
+from wandrer.client import StravaClient
 
 class HistoricalActivities():
-    def __init__(self, strava_client: Client, types: Optional[List[str]] = None):
+    def __init__(self, strava_client: StravaClient, types: Optional[List[str]] = None):
         self.strava_client = strava_client
         self.types = types or ['latlng', 'distance']
         self.path_segments = []
@@ -25,7 +24,7 @@ class HistoricalActivities():
             activity = Activity(strava_client=self.strava_client, activity_id=activity.id, types=self.types)
             activity.fetch_path_segments(sampling_interval=sampling_interval)
     
-            for segment in activity.segments:
+            for segment in activity.path_segments:
                 segment_key = tuple(sorted(segment))
                 if segment_key not in existing_segments:
                     self.path_segments.append(tuple(segment))
@@ -43,7 +42,7 @@ class HistoricalActivities():
         return self.tree_index
 
 class Activity:
-    def __init__(self, strava_client: Client, activity_id, types: Optional[List[str]] = None):
+    def __init__(self, strava_client: StravaClient, activity_id, types: Optional[List[str]] = None):
         self.strava_client = strava_client
         self.activity_id = activity_id
         self.types = types or ['latlng', 'distance']
@@ -95,8 +94,7 @@ class Activity:
                     remainder_seg = complementary_region(full_intersect, self.path_segments[idx])
                     if len(remainder_seg) > 0:
                         remainder_segments.append(remainder_seg)
-                    else:
-                        print("no more")
+
         self.new_segments=remainder_segments
         self.shared_segments=shared_segments 
 
