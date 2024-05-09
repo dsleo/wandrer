@@ -17,6 +17,7 @@ class HistoricalActivities():
         self.path_segments = []
         self.strava_segments = []
         self.midpoints = []
+        self.tree_index = False
 
     def fetch_path_segments(self, sampling_interval: int = 500) -> Tuple[np.ndarray, np.ndarray]:
         activities = list(itertools.islice(self.strava_client.get_activities(), self.limit))
@@ -88,6 +89,9 @@ class Activity:
     def get_new_path_segments(self, history: HistoricalActivities):
         if self.path_segments == []:
             self.fetch_path_segments()
+
+        if not history.tree_index:
+            history.index()
 
         tree = history.tree_index
         sampling_interval = 500
