@@ -81,6 +81,8 @@ class Activity:
 
             self.path_segments = [(tuple(sampled_coords[i]), tuple(sampled_coords[i+1])) for i in range(len(sampled_coords)-1)]
             self.midpoints = np.array([calculate_midpoint(segment) for segment in self.path_segments])
+        else:
+            print("No lat long data for this activity")
 
     def get_new_path_segments(self, history: HistoricalActivities):
         tree = history.tree_index
@@ -106,6 +108,8 @@ class Activity:
                     remainder_seg = complementary_region(full_intersect, self.path_segments[idx])
                     if len(remainder_seg) > 0:
                         remainder_segments.append(remainder_seg)
+            else:
+                remainder_segments.append(self.path_segments[idx])
 
         self.new_path_segments=remainder_segments
         self.shared_path_segments=shared_segments 
