@@ -129,6 +129,6 @@ class Activity:
             history.fetch_strava_segments()
         if not history.tree_index:
             history.index()
-
+        #TODO: do filtering with nearest neighbour search on midpointss
         new_strava_segments = [seg for seg in self.strava_segments if seg not in history.strava_segments]
         return new_strava_segments
