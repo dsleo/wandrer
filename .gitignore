@@ -105,3 +105,4 @@ share/python-wheels/
 
 # Config
 config.py
+.env
