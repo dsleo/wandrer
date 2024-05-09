@@ -1,5 +1,6 @@
 # Wandrer
-Inspired by [Wandrer](https://wandrer.earth), 
+Inspired by [Wandrer](https://wandrer.earth), like in this activity description:  
+
 <img src="https://github.com/dsleo/wandrer/blob/main/img/strava.png" width="50%" height="40%">
 
 The goal is to determine whether any segments within a newly Strava activity have been ridden or run before.  
