@@ -1,4 +1,4 @@
-Just like [Wandrer](https://wandrer.earth), the goal is to determine whether any segments within a newly Strava activity have been ridden or run before.  
+Inspired by [Wandrer](https://wandrer.earth), the goal is to determine whether any segments within a newly Strava activity have been ridden or run before.  
 
 To accomplish this, we employ two distinct strategies:
 
