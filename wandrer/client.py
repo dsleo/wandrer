@@ -1,12 +1,17 @@
+import os
 from dataclasses import dataclass
-from stravalib import Client
+from typing import List
+from dotenv import load_dotenv
+from stravalib.client import Client
+
+load_dotenv()
 
 @dataclass
 class StravaClient:
-    access_token: str
-    refresh_token: str
-    client_id: str
-    client_secret: str
+    access_token: str = os.environ["STRAVA_ACCESS_TOKEN"]
+    refresh_token: str = os.environ["STRAVA_REFRESH_TOKEN"]
+    client_id: str = os.environ["STRAVA_CLIENT_ID"]
+    client_secret: str = os.environ["STRAVA_CLIENT_SECRET"]
 
     client = Client()
 
@@ -16,7 +21,7 @@ class StravaClient:
         self.client.client_id = self.client_id
         self.client.client_secret = self.client_secret
 
-    def get_activities(self):
+    def get_activities(self) -> List:
         self.configure_client()
         activities = list(self.client.get_activities())
         return activities
