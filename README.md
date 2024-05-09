@@ -1,5 +1,5 @@
 # Wandrer
-Inspired by [Wandrer](https://wandrer.earth), like in this activity description:  
+Inspired by [Wandrer](https://wandrer.earth), like in this Strava activity description that shows the number of new miles:  
 
 <img src="https://github.com/dsleo/wandrer/blob/main/img/strava.png" width="90%" height="auto">
 
