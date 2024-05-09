@@ -10,15 +10,16 @@ from wandrer.utils import round_coordinates, sample_coords_by_distance, calculat
 from wandrer.client import StravaClient
 
 class HistoricalActivities():
-    def __init__(self, strava_client: StravaClient, types: Optional[List[str]] = None):
+    def __init__(self, strava_client: StravaClient, types: Optional[List[str]] = None, limit: int = 10):
         self.strava_client = strava_client
         self.types = types or ['latlng', 'distance']
+        self.limit = limit
         self.path_segments = []
         self.strava_segments = []
         self.midpoints = []
 
-    def fetch_path_segments(self, sampling_interval: int = 500,limit: int = 10) -> Tuple[np.ndarray, np.ndarray]:
-        activities = list(itertools.islice(self.strava_client.get_activities(), limit))
+    def fetch_path_segments(self, sampling_interval: int = 500) -> Tuple[np.ndarray, np.ndarray]:
+        activities = list(itertools.islice(self.strava_client.get_activities(), self.limit))
         existing_segments = set()
         for activity in activities:
             activity = Activity(strava_client=self.strava_client, activity_id=activity.id, types=self.types)
@@ -35,8 +36,8 @@ class HistoricalActivities():
         self.path_segments_np = np.array(self.path_segments)
         self.midpoints_np= np.array([(mp[0], mp[1]) for mp in self.midpoints])
 
-    def fetch_strava_segments(self, limit: int = 10):
-        activities = list(itertools.islice(self.strava_client.get_activities(), limit))
+    def fetch_strava_segments(self):
+        activities = list(itertools.islice(self.strava_client.get_activities(), self.limit))
         existing_segments = set()
         for activity in activities:
             activity = Activity(strava_client=self.strava_client, activity_id=activity.id, types=self.types)
@@ -85,6 +86,9 @@ class Activity:
             print("No lat long data for this activity")
 
     def get_new_path_segments(self, history: HistoricalActivities):
+        if self.path_segments == []:
+            self.fetch_path_segments()
+
         tree = history.tree_index
         sampling_interval = 500
         search_radius = sampling_interval / 6371e3
@@ -117,5 +121,10 @@ class Activity:
         return self.new_path_segments
 
     def get_new_strava_segments(self, history: HistoricalActivities):
+        if self.strava_segments == []:
+            self.fetch_strava_segments()
+        if history.strava_segments == []:
+            history.fetch_strava_segments()
+
         new_strava_segments = [seg for seg in self.strava_segments if seg not in history.strava_segments]
         return new_strava_segments
