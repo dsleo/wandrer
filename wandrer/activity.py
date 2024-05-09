@@ -64,7 +64,6 @@ class Activity:
         self.strava_segments = []
 
     def fetch_strava_segments(self):
-        #WOULD BE NICE TO NOT do strava_client.client
         activity_segments = self.strava_client.client.get_activity(self.activity_id, include_all_efforts="True").segment_efforts
         for seg in activity_segments:
             name = seg.name
@@ -73,7 +72,6 @@ class Activity:
             self.strava_segments.append({"name": name, "start_latlng": start_latlng, "end_latlng": end_latlng})
 
     def fetch_path_segments(self, sampling_interval=500):
-        #WOULD BE NICE TO NOT do strava_client.client
         activity_data = self.strava_client.client.get_activity_streams(self.activity_id, types=self.types)
         if 'latlng' in activity_data.keys():
             coords=round_coordinates(activity_data['latlng'].data[:])
@@ -129,6 +127,8 @@ class Activity:
             self.fetch_strava_segments()
         if history.strava_segments == []:
             history.fetch_strava_segments()
+        if not history.tree_index:
+            history.index()
 
         new_strava_segments = [seg for seg in self.strava_segments if seg not in history.strava_segments]
         return new_strava_segments
