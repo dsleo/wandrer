@@ -1,0 +1,59 @@
+name: Strava Workflow
+on:
+  schedule:
+    - cron: '*/5 * * * *' # Every 5 minutes
+  repository_dispatch:
+    types: ['strava']
+jobs:
+  strava:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    env:
+      CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
+      CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
+      REFRESH_TOKEN: ${{ secrets.STRAVA_REFRESH_TOKEN }}
+      GITHUB_USERNAME: ${{ github.actor }}
+      GITHUB_EMAIL: ${{ github.event.sender.email }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+      - name: Authenticate with Strava
+        id: auth
+        uses: juliangruber/read-github-actions-secrets@master
+        with:
+          secrets: |
+            STRAVA_CLIENT_ID=${{ env.CLIENT_ID }}
+            STRAVA_CLIENT_SECRET=${{ env.CLIENT_SECRET }}
+            STRAVA_REFRESH_TOKEN=${{ env.REFRESH_TOKEN }}
+        env:
+          STRAVA_AUTHORIZATION: ${{ steps.auth.outputs.authorization }}
+      - name: Fetch latest activity
+        id: fetch
+        run: |
+          ACTIVITY=$(curl -sS -H "Authorization: Bearer $STRAVA_AUTHORIZATION" https://www.strava.com/api/v3/athlete/activities \
+                       | jq '.[] | select(.is_private==false) | .id' | tail -n 1)
+          echo ::set-output name=ACTIVITY::$ACTIVITY
+      - name: Update activity description
+        run: |
+          DESCRIPTION="Good job!\n\n$(curl -sS -H "Authorization: Bearer $STRAVA_AUTHORIZATION" https://www.strava.com/api/v3/activities/$ACTIVITY)"
+          curl -sS -X PATCH -H "Authorization: Bearer $STRAVA_AUTHORIZATION" -H "Content-Type: application/json" \
+               --data "{\"description\":\"$DESCRIPTION\"}" https://www.strava.com/api/v3/activities/$ACTIVITY > /dev/null
+      - name: Comment on PR
+        uses: actions/github-script@v5
+        with:
+          script: |
+            const prNumber = context.payload.pull_request?.number || ''
+            await github.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `Updated Strava activity description with "Good job!" message.
+
+View the updated activity here: <${{steps.fetch.outputs.ACTIVITY_URL}}>`
+            })
+          args: |
+            context
+            github
