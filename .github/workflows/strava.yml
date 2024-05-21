@@ -12,31 +12,38 @@ jobs:
       pull-requests: write
       issues: write
     env:
-      CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
-      CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
-      REFRESH_TOKEN: ${{ secrets.STRAVA_REFRESH_TOKEN }}
+      STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
+      STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
+      STRAVA_REFRESH_TOKEN: ${{ secrets.STRAVA_REFRESH_TOKEN }}
       GITHUB_USERNAME: ${{ github.actor }}
       GITHUB_EMAIL: ${{ github.event.sender.email }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_PERSONAL_ACCESS_TOKEN }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
       - name: Authenticate with Strava
         id: auth
-        uses: juliangruber/read-github-actions-secrets@master
-        with:
-          secrets: |
-            STRAVA_CLIENT_ID=${{ env.CLIENT_ID }}
-            STRAVA_CLIENT_SECRET=${{ env.CLIENT_SECRET }}
-            STRAVA_REFRESH_TOKEN=${{ env.REFRESH_TOKEN }}
-        env:
-          STRAVA_AUTHORIZATION: ${{ steps.auth.outputs.authorization }}
+        run: |
+          AUTHORIZATION=$(echo -ne "$STRAVA_CLIENT_ID:$STRAVA_CLIENT_SECRET" | base64)
+          TOKEN=$(curl -sS -o /dev/null -w "%{http_code}" -X POST -H "Authorization: Basic $AUTHORIZATION" -d "client_id=$STRAVA_CLIENT_ID&client_secret=$STRAVA_CLIENT_SECRET&refresh_token=$STRAVA_REFRESH_TOKEN&grant_type=refresh_token" https://www.strava.com/oauth/token)
+          if (( $(echo $TOKEN | cut -d' ' -f1) != 200 ))
+          then
+            echo "::error ::Authentication failed."
+            exit 1
+          fi
+          echo "::set-output name=authorization::Bearer $(echo $TOKEN | jq -r '.access_token')"
       - name: Fetch latest activity
         id: fetch
+        env:
+          STRAVA_AUTHORIZATION: ${{ steps.auth.outputs.authorization }}
         run: |
           ACTIVITY=$(curl -sS -H "Authorization: Bearer $STRAVA_AUTHORIZATION" https://www.strava.com/api/v3/athlete/activities \
                        | jq '.[] | select(.is_private==false) | .id' | tail -n 1)
-          echo ::set-output name=ACTIVITY::$ACTIVITY
+          echo "::set-output name=ACTIVITY::$ACTIVITY"
+          echo "::set-output name=ACTIVITY_URL::$(curl -sS -H "Authorization: Bearer $STRAVA_AUTHORIZATION" https://www.strava.com/api/v3/activities/${ACTIVITY} | jq -r '.map.summary_polyline')"
       - name: Update activity description
+        env:
+          STRAVA_AUTHORIZATION: ${{ steps.auth.outputs.authorization }}
         run: |
           DESCRIPTION="Good job!\n\n$(curl -sS -H "Authorization: Bearer $STRAVA_AUTHORIZATION" https://www.strava.com/api/v3/activities/$ACTIVITY)"
           curl -sS -X PATCH -H "Authorization: Bearer $STRAVA_AUTHORIZATION" -H "Content-Type: application/json" \
@@ -52,5 +59,3 @@ jobs:
               issue_number: prNumber,
               body: `Updated Strava activity description with "Good job!" message. View the updated activity here: <${{steps.fetch.outputs.ACTIVITY_URL}}>`
             })
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_PERSONAL_ACCESS_TOKEN }}
