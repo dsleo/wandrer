@@ -4,7 +4,10 @@ on:
     - cron: '*/5 * * * *' # Every 5 minutes
   repository_dispatch:
     types: ['strava']
-    ref: main
+    inputs:
+      issue_number:
+        required: true
+        type: integer
 jobs:
   strava:
     runs-on: ubuntu-latest
@@ -12,52 +15,62 @@ jobs:
       contents: read
       pull-requests: write
       issues: write
-      security-events: write
     env:
       STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
       STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
       STRAVA_REFRESH_TOKEN: ${{ secrets.STRAVA_REFRESH_TOKEN }}
-      GITHUB_USERNAME: ${{ github.actor }}
-      GITHUB_EMAIL: ${{ github.event.sender.email }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_PERSONAL_ACCESS_TOKEN }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14
       - name: Authenticate with Strava
         id: auth
         run: |
           AUTHORIZATION=$(echo -ne "$STRAVA_CLIENT_ID:$STRAVA_CLIENT_SECRET" | base64)
-          TOKEN=$(curl -sS -o /dev/null -w "%{http_code}" -X POST -H "Authorization: Basic $AUTHORIZATION" -d "client_id=$STRAVA_CLIENT_ID&client_secret=$STRAVA_CLIENT_SECRET&refresh_token=$STRAVA_REFRESH_TOKEN&grant_type=refresh_token" https://www.strava.com/oauth/token)
-          if (( $(echo $TOKEN | cut -d' ' -f1) != 200 ))
-          then
-            echo "::error ::Authentication failed."
+          RESPONSE=$(curl -sS -o /dev/null -w '%{http_code}' \
+            -X POST -H "Authorization: Basic $AUTHORIZATION" \
+            -H "Content-Type: application/json" \
+            -d "{ \"client_id\": \"$STRAVA_CLIENT_ID\", \"client_secret\": \"$STRAVA_CLIENT_SECRET\", \"refresh_token\": \"$STRAVA_REFRESH_TOKEN\", \"grant_type\": \"refresh_token\" }" \
+            https://www.strava.com/api/v3/oauth/token)
+          if [[ $RESPONSE != 200 ]]; then
+            echo "::error ::Failed to authenticate with Strava API"
             exit 1
           fi
-          echo "::set-output name=authorization::Bearer $(echo $TOKEN | jq -r '.access_token')"
-      - name: Fetch latest activity
+          STRAVA_ACCESS_TOKEN=$(echo $RESPONSE | awk -F '[:}]+' '{print $NF}')
+          echo "::set-output name=authorization::Bearer $STRAVA_ACCESS_TOKEN"
+      - name: Fetch Latest Activity
         id: fetch
-        env:
-          STRAVA_AUTHORIZATION: ${{ steps.auth.outputs.authorization }}
         run: |
-          ACTIVITY=$(curl -sS -H "Authorization: Bearer $STRAVA_AUTHORIZATION" https://www.strava.com/api/v3/athlete/activities \
-                       | jq '.[] | select(.is_private==false) | .id' | tail -n 1)
-          echo "::set-output name=ACTIVITY::$ACTIVITY"
-          echo "::set-output name=ACTIVITY_URL::$(curl -sS -H "Authorization: Bearer $STRAVA_AUTHORIZATION" https://www.strava.com/api/v3/activities/${ACTIVITY} | jq -r '.map.summary_polyline')"
-      - name: Update activity description
-        env:
-          STRAVA_AUTHORIZATION: ${{ steps.auth.outputs.authorization }}
-        run: |
-          DESCRIPTION="Good job!\n\n$(curl -sS -H "Authorization: Bearer $STRAVA_AUTHORIZATION" https://www.strava.com/api/v3/activities/$ACTIVITY)"
-          curl -sS -X PATCH -H "Authorization: Bearer $STRAVA_AUTHORIZATION" -H "Content-Type: application/json" \
-               --data "{\"description\":\"$DESCRIPTION\"}" https://www.strava.com/api/v3/activities/$ACTIVITY > /dev/null
-      - name: Comment on PR
+          HEADERS=(--header Content-Type:application/json)
+          DATA='{}'
+          if [[ ! -z "${{ github.event.inputs.issue_number }}" ]]; then
+             DATA='{"message":"Retrieved the latest Strava activity","issue_number":{{ github.event.inputs.issue_number }}}'
+          fi
+          RESPONSE=$(curl -sS -w '%{http_code}' \
+            "${HEADERS[@]}" \
+            -H "Authorization: Bearer $STRAVA_ACCESS_TOKEN" \
+            -d "$DATA" \
+            https://www.strava.com/api/v3/athlete/activities)
+          if [[ $RESPONSE != 200 && $RESPONSE != 201 ]]; then
+            echo "::error ::Failed to fetch latest Strava activity"
+            exit 1
+          fi
+          echo "::set-output name=activity_id::$(echo $RESPONSE | awk -F '[:}]+' '{print $NF}')"
+      - name: Post Comment to PR
+        if: always()
         uses: actions/github-script@v5
         with:
           script: |
-            const prNumber = context.payload.pull_request?.number || ''
-            await github.rest.issues.createComment({
+            const issueNumber = ${{ github.event.inputs.issue_number }}
+            const activityUrl = "<https://www.strava.com/activities/" + ${{ steps.fetch.outputs.activity_id }} + ">"
+            const commentBody = "Updated Strava activity description with 'Good job!' message. View the updated activity here: " + activityUrl
+            await github.issues.createComment({
+              issue_number: issueNumber,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: prNumber,
-              body: `Updated Strava activity description with "Good job!" message. View the updated activity here: <${{steps.fetch.outputs.ACTIVITY_URL}}>`
-            })
+              body: commentBody
+            });
