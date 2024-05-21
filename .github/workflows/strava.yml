@@ -48,18 +48,16 @@ jobs:
           HEADERS=(--header Content-Type:application/json)
           DATA='{}'
           if [[ ! -z "${{ github.event.inputs.issue_number }}" ]]; then
-             DATA='{"message":"Retrieved the latest Strava activity","issue_number":{{ github.event.inputs.issue_number }}}'
+            DATA='{"message":"Retrieved the latest Strava activity","issue_number":{{ github.event.inputs.issue_number }}}'
           fi
-          RESPONSE=$(curl -sS -w '%{http_code}' \
-            "${HEADERS[@]}" \
-            -H "Authorization: Bearer $STRAVA_ACCESS_TOKEN" \
-            -d "$DATA" \
-            https://www.strava.com/api/v3/athlete/activities)
-          if [[ $RESPONSE != 200 && $RESPONSE != 201 ]]; then
-            echo "::error ::Failed to fetch latest Strava activity"
+          RESPONSE=$(curl -sS -w "\n%{http_code}\n" "${HEADERS[@]}" -H "Authorization: Bearer $STRAVA_ACCESS_TOKEN" -d "$DATA" https://www.strava.com/api/v3/athlete/activities)
+          HTTP_STATUS_CODE="${RESPONSE%%$'\r\n'*(*$\n)}"
+          RESPONSE_BODY="${RESPONSE#*"$'\n'"}"
+          if [[ "$HTTP_STATUS_CODE" != 200 && "$HTTP_STATUS_CODE" != 201 ]]; then
+            echo "::error ::Failed to fetch latest Strava activity. Response: $RESPONSE_BODY"
             exit 1
           fi
-          echo "::set-output name=activity_id::$(echo $RESPONSE | awk -F '[:}]+' '{print $NF}')"
+          echo "::set-output name=activity_id::$(echo $RESPONSE_BODY | awk -F '[:}]+' '{print $NF}')"
       - name: Post Comment to PR
         if: always()
         uses: actions/github-script@v5
