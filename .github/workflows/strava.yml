@@ -11,6 +11,8 @@ jobs:
       contents: read
       pull-requests: write
       issues: write
+      identity: write
+      security-events: write
     env:
       STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
       STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
