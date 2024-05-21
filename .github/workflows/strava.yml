@@ -4,7 +4,7 @@ on:
     - cron: '*/5 * * * *' # Every 5 minutes
   repository_dispatch:
     types: ['strava']
-    ref: master
+    ref: main
 jobs:
   strava:
     runs-on: ubuntu-latest
