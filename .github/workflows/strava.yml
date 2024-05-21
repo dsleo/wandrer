@@ -45,6 +45,7 @@ jobs:
       - name: Fetch Latest Activity
         id: fetch
         run: |
+          echo "Access Token: $STRAVA_ACCESS_TOKEN"
           HEADERS=(--header Content-Type:application/json --header Authorization:"Bearer $STRAVA_ACCESS_TOKEN")
           DATA='{}'
           if [[ ! -z "${{ github.event.inputs.issue_number }}" ]]; then
