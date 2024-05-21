@@ -17,7 +17,9 @@ class HistoricalActivities():
         self.path_segments = []
         self.strava_segments = []
         self.midpoints = []
+        self.midpoints_strava = []
         self.tree_index = False
+        self.strava_tree_index = False
 
     def fetch_path_segments(self, sampling_interval: int = 500) -> Tuple[np.ndarray, np.ndarray]:
         activities = list(itertools.islice(self.strava_client.get_activities(), self.limit))
@@ -45,15 +47,26 @@ class HistoricalActivities():
             activity.fetch_strava_segments()
 
             for segment in activity.strava_segments:
-                segment_key = tuple(sorted(segment))
+                merged_parts = '+'.join(str(x) for x in list(segment.values())[0])
+                segment_key = tuple([segment['name']] + [merged_parts])
                 if segment_key not in existing_segments:
-                    self.strava_segments.append(tuple(segment))
+                    self.strava_segments.append(segment)
                     existing_segments.add(segment_key)
-    
-    def index(self) -> BallTree:
-        midpoints = np.array([[np.deg2rad(lat), np.deg2rad(lon)] for lat, lon in self.midpoints_np])
-        self.tree_index = BallTree(midpoints, metric='haversine')
-        return self.tree_index
+                    midpoint = calculate_midpoint([segment["start_latlng"], segment["end_latlng"]])
+                    self.midpoints_strava.append(midpoint)
+
+        self.midpoints_strava= np.array([(mp[0], mp[1]) for mp in self.midpoints_strava])
+
+    def index(self, segment_type="path") -> BallTree:
+        if segment_type=="path":
+            midpoints = np.array([[np.deg2rad(lat), np.deg2rad(lon)] for lat, lon in self.midpoints_np])
+            self.tree_index = BallTree(midpoints, metric='haversine')
+            return self.tree_index
+        
+        elif segment_type=="strava":
+            midpoints = np.array([[np.deg2rad(lat), np.deg2rad(lon)] for lat, lon in self.midpoints_strava])
+            self.strava_tree_index = BallTree(midpoints, metric='haversine')
+            return self.strava_tree_index
 
 class Activity:
     def __init__(self, strava_client: StravaClient, activity_id, types: Optional[List[str]] = None):
@@ -70,15 +83,14 @@ class Activity:
             start_latlng = seg.to_dict()['segment']['end_latlng']
             end_latlng = seg.to_dict()['segment']['start_latlng']
             self.strava_segments.append({"name": name, "start_latlng": start_latlng, "end_latlng": end_latlng})
+        self.midpoints_strava = np.array([calculate_midpoint([segment["start_latlng"], segment["end_latlng"]]) for segment in self.strava_segments])
 
     def fetch_path_segments(self, sampling_interval=500):
         activity_data = self.strava_client.client.get_activity_streams(self.activity_id, types=self.types)
         if 'latlng' in activity_data.keys():
             coords=round_coordinates(activity_data['latlng'].data[:])
             dists = (activity_data['distance'].data[:])
-
             sampled_coords = sample_coords_by_distance(coords, dists, sampling_interval=sampling_interval)
-
             self.path_segments = [(tuple(sampled_coords[i]), tuple(sampled_coords[i+1])) for i in range(len(sampled_coords)-1)]
             self.midpoints = np.array([calculate_midpoint(segment) for segment in self.path_segments])
         else:
@@ -126,9 +138,28 @@ class Activity:
         if self.strava_segments == []:
             self.fetch_strava_segments()
         if history.strava_segments == []:
+            print("Fetching History Strava segments")
             history.fetch_strava_segments()
-        if not history.tree_index:
-            history.index()
-        #TODO: do filtering with nearest neighbour search on midpointss
-        new_strava_segments = [seg for seg in self.strava_segments if seg not in history.strava_segments]
-        return new_strava_segments
+        if not history.strava_tree_index:
+            print("History not indexed")
+            history.index(segment_type="strava")
+            print("History now indexed")
+
+        tree = history.strava_tree_index
+        sampling_interval = 500
+        search_radius = sampling_interval / 6371e3
+        self.new_strava_segments = []
+        self.known_strava_segments = []
+
+        test_list = np.array([[np.deg2rad(lat), np.deg2rad(lon)] for lat, lon in self.midpoints_strava])
+        for idx, test_point in enumerate(test_list):
+            ind = tree.query_radius(test_point.reshape(1, -1), r=search_radius)
+            if ind[0].size>0:
+                for point in ind[0]:
+                    seg = history.strava_segments[point]
+                    if seg["name"] == self.strava_segments[idx]["name"]:
+                        self.known_strava_segments.append(seg)
+
+        self.new_strava_segments  = [seg for seg in self.strava_segments if seg not in self.known_strava_segments]
+        #new_strava_segments = [seg for seg in self.strava_segments if seg not in history.strava_segments]
+        return self.new_strava_segments
