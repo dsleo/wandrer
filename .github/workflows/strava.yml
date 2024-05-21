@@ -50,10 +50,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: prNumber,
-              body: `Updated Strava activity description with "Good job!" message.
-
-View the updated activity here: <${{steps.fetch.outputs.ACTIVITY_URL}}>`
+              body: `Updated Strava activity description with "Good job!" message. View the updated activity here: <${{steps.fetch.outputs.ACTIVITY_URL}}>`
             })
-          args: |
-            context
-            github
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_PERSONAL_ACCESS_TOKEN }}
