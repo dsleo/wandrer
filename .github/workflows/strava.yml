@@ -64,7 +64,7 @@ jobs:
           echo "Access Token: $STRAVA_ACCESS_TOKEN"
           HEADER_CONTENT_TYPE="Content-Type:application/json"
           HEADER_AUTHORIZATION="Authorization:Bearer $STRAVA_ACCESS_TOKEN"
-          HEADERS="$HEADER_CONTENT_TYPE $HEADER_AUTHORIZATION"
+          HEADERS="${HEADER_CONTENT_TYPE} ${HEADER_AUTHORIZATION}"
           DATA='{}'
           if [[ ! -z "${{ github.event.inputs.issue_number }}" ]]; then
             DATA='{"message":"Retrieved the latest Strava activity","issue_number":{{ github.event.inputs.issue_number }}}'
