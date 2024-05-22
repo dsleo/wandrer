@@ -69,9 +69,16 @@ jobs:
           if [[ ! -z "${{ github.event.inputs.issue_number }}" ]]; then
             DATA='{"message":"Retrieved the latest Strava activity","issue_number":{{ github.event.inputs.issue_number }}}'
           fi
+          echo "Headers: $HEADERS"
+          echo "Data: $DATA"
+          echo "URL: https://www.strava.com/api/v3/athlete/activities"
           RESPONSE=$(curl -sS -w "\n%{http_code}\n" "$HEADERS" -H "$HEADER_AUTHORIZATION" -d "$DATA" https://www.strava.com/api/v3/athlete/activities)
         
-          # Rest remains intact
+          # Debugging info
+          echo ""
+          echo "Response Headers: $(head -n -1 <<< "$RESPONSE")"
+          echo "Response Body: $(tail -n 1 <<< "$RESPONSE")"
+        
           RESPONSE_LINE="$(tail -n 1 <<< "$RESPONSE")"
           HTTP_STATUS_CODE="$(echo "$RESPONSE_LINE" | cut -d' ' -f1)"
           RESPONSE_BODY="$(echo "$RESPONSE_LINE" | cut -d' ' -f2-)"
