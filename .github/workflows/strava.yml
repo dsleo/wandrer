@@ -68,23 +68,27 @@ jobs:
           echo "Executing Command: $CMD"
           echo "Running cURL..."
           response=$($CMD)
-          # Extract status code and body from the response
+          
           http_status_code=$(tail -n 1 <<< "$response" | cut -d' ' -f1)
           response_body=$(tail -n 1 <<< "$response" | cut -d' ' -f2-)
-        
+          
           # Display debug information
           echo ""
-          echo "Response Headers: $(head -n -1 <<< "$response")"
+          echo "Response Headers:"
+          head -n -1 <<< "$response"
           echo "Response Body: $response_body"
-        
+          
           # Validate the response status code
           if [[ "$http_status_code" != 200 && "$http_status_code" != 201 ]]; then
-            echo "::error ::Failed to fetch latest Strava activity. Response: $response_body"
+            # Print an error message and exit the script with a failure status code
+            >&2 echo "Failed to fetch latest Strava activity. Response: $response_body"
             exit 1
           fi
-        
-          # Parse activity ID from the JSON response
-          activity_id=$(echo "$response_body" | awk -F '[:}]+' '{print $NF}')
+          
+          # Parse the activity ID from the JSON response
+          activity_id=$(echo "$response_body" | awk -F '[:,}]+' '{print $NF}')
+          
+          # Set the activity ID output parameter
           echo "::set-output name=activity_id::$activity_id"
       - name: Post Comment to PR
         if: always()
