@@ -32,17 +32,16 @@ jobs:
       - name: Authenticate with Strava
         id: auth
         run: |
-          AUTHORIZATION="$(echo -ne "${STRAVA_CLIENT_ID}:${STRAVA_CLIENT_SECRET}" | base64)"
-          RESPONSE="$(curl -sS -o /dev/null -w '%{http_code}\n' \
-              -X POST -H "Authorization: Basic ${AUTHORIZATION}" \
+          AUTHORIZATION="$(printf "%s:%s" "$STRAVA_CLIENT_ID" "$STRAVA_CLIENT_SECRET" | base64)"
+          RESPONSE="$(curl --silent --show-error \
+              -X POST -H "Authorization: Basic $AUTHORIZATION" \
               -H "Content-Type: application/json" \
               -d '{"client_id": "'"${STRAVA_CLIENT_ID}"'", "client_secret": "'"${STRAVA_CLIENT_SECRET}"'", "refresh_token": "'"${STRAVA_REFRESH_TOKEN}"'", "grant_type": "refresh_token" }' \
               https://www.strava.com/api/v3/oauth/token)"
           
-          http_status="${RESPONSE%%[[:space:]]*}"
-          response_body="${RESPONSE#*[[:space:]]}"
+          read -r http_status response_body < <(printf '%s\n' "$RESPONSE")
           
-          if [[ "$http_status" != "200" ]]; then
+          if (( http_status != 200 )); then
               echo "::error ::Failed to authenticate with Strava API (HTTP status code: ${http_status})"
               exit 1
           fi
