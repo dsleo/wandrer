@@ -46,9 +46,10 @@ jobs:
               -H "Content-Type: application/json" \
               -d '{"client_id": "'"${STRAVA_CLIENT_ID}"'", "client_secret": "'"${STRAVA_CLIENT_SECRET}"'", "refresh_token": "'"${STRAVA_REFRESH_TOKEN}"'", "grant_type": "refresh_token" }' \
               https://www.strava.com/api/v3/oauth/token)"
-          
-          IFS='\n' read -r http_code json <<< "$RESPONSE"
-          STRAVA_ACCESS_TOKEN=$(echo "${json}" | jq -r '.access_token')
+
+          http_code=$(awk '/^[[:digit:]]+$/{print;exit}'; printf '%s\n' "$RESPONSE")
+          STRAVA_ACCESS_TOKEN=$(echo "${RESPONSE}" | jq -r '.access_token')
+
           if [[ ${http_code} -ne 200 ]]; then
               echo "::error ::Failed to authenticate with Strava API (HTTP status code: ${http_code})"
               exit 1
