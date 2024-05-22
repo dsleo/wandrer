@@ -101,7 +101,6 @@ jobs:
           STRAVA_ACCESS_TOKEN: $STRAVA_ACCESS_TOKEN
         run: |
           activity_id=${{ steps.fetch.outputs.activity_id }}
-          # NEW_DESCRIPTION="Good job!"
           NEW_DESCRIPTION=$(python .github/scripts/generate_description.py $activity_id $STRAVA_ACCESS_TOKEN)
   
   
