@@ -32,10 +32,10 @@ jobs:
         run: |
           AUTHORIZATION=$(echo -n "${STRAVA_CLIENT_ID}:${STRAVA_CLIENT_SECRET}" | base64)
           response=$(curl -sS -o /dev/null -w "%{http_code}\n%{stderr}" \
-          -X POST -H "Authorization: Basic ${AUTHORIZATION}" \
-          -H "Content-Type: application/json" \
-          -d '{"client_id":"'"${STRAVA_CLIENT_ID}"'", "client_secret":"'"${STRAVA_CLIENT_SECRET}"'", "refresh_token":"'"${STRAVA_REFRESH_TOKEN}"'", "grant_type":"refresh_token"}' \
-          https://www.strava.com/api/v3/oauth/token)
+            -X POST -H "Authorization: Basic ${AUTHORIZATION}" \
+            -H "Content-Type: application/json" \
+            -d '{"client_id":"'"${STRAVA_CLIENT_ID}"'", "client_secret":"'"${STRAVA_CLIENT_SECRET}"'", "refresh_token":"'"${STRAVA_REFRESH_TOKEN}"'", "grant_type":"refresh_token"}' \
+            https://www.strava.com/api/v3/oauth/token)
           
           http_status="${response%%$'\n'*}"
           if (( http_status != 200 )); then
@@ -43,12 +43,10 @@ jobs:
             exit 1
           fi
           
-          # Extract the access token from the JSON response using jq
           STRAVA_ACCESS_TOKEN="$(echo "${response#*\"access_token\":\")" | cut -d',' -f1)"
           STRAVA_ACCESS_TOKEN="${STRAVA_ACCESS_TOKEN##*" : "}"
           
-          # Set the output variable for use later in the workflow
-          echo "::set-output name=authorization::Bearer ${STRAVA_ACCESS_TOKEN}"
+          echo "::set-output name=authorization::Bearer $STRAVA_ACCESS_TOKEN"
       - name: Fetch Latest Activity
         id: fetch
         run: |
