@@ -67,13 +67,13 @@ jobs:
           # Debug: Print the token for debugging purposes
           echo "STRAVA_ACCESS_TOKEN: $STRAVA_ACCESS_TOKEN"
           
-          # Construct the complete CMD
-          CMD="curl -sS -w '\n%{http_code}\n' -H 'Authorization: Bearer $STRAVA_ACCESS_TOKEN' -H 'Content-Type: application/json' 'https://www.strava.com/api/v3/athlete/activities$QUERY_PARAMS'"
+          # Construct the complete CMD without using eval
+          CMD="curl -sS -w '\n%{http_code}\n' -H \"Authorization: Bearer $STRAVA_ACCESS_TOKEN\" -H \"Content-Type: application/json\" \"https://www.strava.com/api/v3/athlete/activities$QUERY_PARAMS\""
           echo "Executing Command: $CMD"
           echo "Running cURL..."
       
           # Execute the curl command and capture the output and status code
-          response=$(eval $CMD)
+          response=$(curl -sS -w '\n%{http_code}\n' -H "Authorization: Bearer $STRAVA_ACCESS_TOKEN" -H "Content-Type: application/json" "https://www.strava.com/api/v3/athlete/activities$QUERY_PARAMS")
           http_status_code=$(echo "$response" | tail -n 1)
           response_body=$(echo "$response" | head -n -1)
           
