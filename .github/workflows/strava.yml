@@ -69,9 +69,7 @@ jobs:
           if [[ ! -z "${{ github.event.inputs.issue_number }}" ]]; then
             DATA='{"message":"Retrieved the latest Strava activity","issue_number":{{ github.event.inputs.issue_number }}}'
           fi
-          echo "Constructed URL: https://www.strava.com/api/v3/athlete/activities$QUERY_PARAMS"
           echo "Running cURL..."
-          echo "curl -sS -w "\n%{http_code}\n" -H "$HEADERS" -d "$DATA" "https://www.strava.com/api/v3/athlete/activities$QUERY_PARAMS"
           RESPONSE=$(curl -sS -w "\n%{http_code}\n" -H "$HEADERS" -d "$DATA" "https://www.strava.com/api/v3/athlete/activities$QUERY_PARAMS")
         
           # Debugging info
