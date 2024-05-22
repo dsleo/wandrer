@@ -49,7 +49,7 @@ jobs:
           STRAVA_ACCESS_TOKEN="${tmp%%,*}}"
           STRAVA_ACCESS_TOKEN="${STRAVA_ACCESS_TOKEN%:*}}"
           
-          echo "::set-env name=strava_access_token::$STRAVA_ACCESS_TOKEN"
+          echo "STRAVA_ACCESS_TOKEN=$STRAVA_ACCESS_TOKEN" >> "$GITHUB_ENV"
       - name: Fetch Latest Activity
         id: fetch
         run: |
