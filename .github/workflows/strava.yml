@@ -25,8 +25,14 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
-      - name: Install JQ
-        uses: wttools/install-jq-action@master
+      - name: Download jq binary
+        run: |
+            mkdir -p ~/.local/bin && \
+            curl -LO https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 && \
+            mv jq-linux64 ~/.local/bin/jq && \
+            chmod +x ~/.local/bin/jq
+      - name: Set PATH for jq
+        run: export PATH=~/.local/bin:"$PATH"
       - name: Setup Node.js
         uses: actions/setup-node@v2
         with:
@@ -42,8 +48,8 @@ jobs:
               https://www.strava.com/api/v3/oauth/token)"
           
           STRAVA_ACCESS_TOKEN=$(echo "${RESPONSE}" | jq -r '.access_token')
-        
-          if [[ ${http_status} -ne 200 ]]; then
+          http_code="${BASH_REMATCH[1]}"
+          if [[ ${http_code} -ne 200 ]]; then
               echo "::error ::Failed to authenticate with Strava API (HTTP status code: ${http_status})"
               exit 1
           fi
