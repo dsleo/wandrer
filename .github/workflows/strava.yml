@@ -32,10 +32,10 @@ jobs:
         run: |
           AUTHORIZATION=$(echo -n "${STRAVA_CLIENT_ID}:${STRAVA_CLIENT_SECRET}" | base64)
           response=$(curl -sS -o /dev/null -w "%{http_code}\n%{stderr}" \
-            -X POST -H "Authorization: Basic ${AUTHORIZATION}" \
-            -H "Content-Type: application/json" \
-            -d '{"client_id":"'"${STRAVA_CLIENT_ID}"'", "'"client_secret":"'"${STRAVA_CLIENT_SECRET}"'", "'"refresh_token":"'"${STRAVA_REFRESH_TOKEN}"'", "'"grant_type":"refresh_token""}' \
-            https://www.strava.com/api/v3/oauth/token)
+          -X POST -H "Authorization: Basic ${AUTHORIZATION}" \
+          -H "Content-Type: application/json" \
+          -d '{"client_id":"'"${STRAVA_CLIENT_ID}"'", "client_secret":"'"${STRAVA_CLIENT_SECRET}"'", "refresh_token":"'"${STRAVA_REFRESH_TOKEN}"'", "grant_type":"refresh_token"}' \
+          https://www.strava.com/api/v3/oauth/token)
           
           http_status="${response%%$'\n'*}"
           if (( http_status != 200 )); then
