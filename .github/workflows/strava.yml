@@ -8,9 +8,6 @@ on:
       issue_number:
         required: true
         type: integer
-environments:
-  development:
-    secrets: inherit
 jobs:
   strava:
     runs-on: ubuntu-latest
