@@ -25,6 +25,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
+      - name: Install JQ
+        uses: wttools/install-jq-action@master
       - name: Setup Node.js
         uses: actions/setup-node@v2
         with:
@@ -39,23 +41,15 @@ jobs:
               -d '{"client_id": "'"${STRAVA_CLIENT_ID}"'", "client_secret": "'"${STRAVA_CLIENT_SECRET}"'", "refresh_token": "'"${STRAVA_REFRESH_TOKEN}"'", "grant_type": "refresh_token" }' \
               https://www.strava.com/api/v3/oauth/token)"
           
-          read -r http_status response_body < <(printf '%s\n' "$RESPONSE")
-          
-          if (( http_status != 200 )); then
+          STRAVA_ACCESS_TOKEN=$(echo "${RESPONSE}" | jq -r '.access_token')
+        
+          if [[ ${http_status} -ne 200 ]]; then
               echo "::error ::Failed to authenticate with Strava API (HTTP status code: ${http_status})"
               exit 1
           fi
-          
-          start=$(expr index "$response_body" '"access_token":')
-          start=$(($start + 16))
-          end=$(expr index "$response_body" ",")
-          
-          STRAVA_ACCESS_TOKEN="${response_body:$start:$((end-start))}"
-          STRAVA_ACCESS_TOKEN="${STRAVA_ACCESS_TOKEN%,*}"
-          
-          echo "STRAVA_ACCESS_TOKEN=$STRAVA_ACCESS_TOKEN" >> "$GITHUB_ENV"
-          
-          echo "Access Token: $STRAVA_ACCESS_TOKEN"
+
+          echo "STRAVA_ACCESS_TOKEN=${STRAVA_ACCESS_TOKEN}" >> "${GITHUB_ENV}"
+          echo "Access Token: ${STRAVA_ACCESS_TOKEN}"
       - name: Fetch Latest Activity
         id: fetch
         run: |
