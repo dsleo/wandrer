@@ -11,6 +11,7 @@ on:
 jobs:
   strava:
     runs-on: ubuntu-latest
+    environment: development
     permissions:
       contents: read
       pull-requests: write
