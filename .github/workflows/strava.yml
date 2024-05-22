@@ -21,7 +21,7 @@ jobs:
       STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
       STRAVA_REFRESH_TOKEN: ${{ secrets.STRAVA_REFRESH_TOKEN }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_PERSONAL_ACCESS_TOKEN }}
-      STRAVA_ACCESS_TOKEN: ${{ env.STRAVA_ACCESS_TOKEN }}
+      STRAVA_ACCESS_TOKEN: ${{ secrets.GITHUB_ENV['STRAVA_ACCESS_TOKEN'] }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
