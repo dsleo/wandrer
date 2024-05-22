@@ -64,14 +64,14 @@ jobs:
           echo "Access Token: $STRAVA_ACCESS_TOKEN"
           HEADER_CONTENT_TYPE="Content-Type:application/json"
           HEADER_AUTHORIZATION="Authorization:Bearer $STRAVA_ACCESS_TOKEN"
-          HEADERS="${HEADER_CONTENT_TYPE} ${HEADER_AUTHORIZATION}"
+          QUERY_PARAMS="?per_page=1"
           DATA='{}'
           if [[ ! -z "${{ github.event.inputs.issue_number }}" ]]; then
             DATA='{"message":"Retrieved the latest Strava activity","issue_number":{{ github.event.inputs.issue_number }}}'
           fi
-          echo "Constructed URL: https://www.strava.com/api/v3/athlete/activities"
+          echo "Constructed URL: https://www.strava.com/api/v3/athlete/activities$QUERY_PARAMS"
           echo "Running cURL..."
-          RESPONSE=$(curl -sS -w "\n%{http_code}\n" "$HEADERS" -H "$HEADER_AUTHORIZATION" -d "$DATA" "https://www.strava.com/api/v3/athlete/activities")
+          RESPONSE=$(curl -sS -w "\n%{http_code}\n" "$HEADERS" -H "$HEADER_AUTHORIZATION" -d "$DATA" "https://www.strava.com/api/v3/athlete/activities$QUERY_PARAMS")
         
           # Debugging info
           echo ""
