@@ -61,7 +61,7 @@ jobs:
       - name: Fetch Latest Activity
         id: fetch
         run: |
-          HEADERS="Authorization:Bearer ${{ secrets.STRAVA_ACCESS_TOKEN }}"
+          HEADERS="Authorization:Bearer ${STRAVA_ACCESS_TOKEN}}"
           QUERY_PARAMS="?per_page=1"
         
           # Check if issue number is provided
@@ -72,6 +72,7 @@ jobs:
           fi
         
           echo "Running cURL..."
+          echo "HEADERS: $HEADERS"
           response=$(curl -sS -w "\n%{http_code}\n" -H "$HEADERS" -H "Content-Type: application/json" -d "$DATA" "https://www.strava.com/api/v3/athlete/activities$QUERY_PARAMS")
         
           # Extract status code and body from the response
