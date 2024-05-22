@@ -72,9 +72,9 @@ jobs:
           fi
         
           echo "Running cURL..."
-          echo "HEADERS: $HEADERS"
-          response=$(curl -sS -w "\n%{http_code}\n" -H "$HEADERS" -H "Content-Type: application/json" -d "$DATA" "https://www.strava.com/api/v3/athlete/activities$QUERY_PARAMS")
-        
+          CMD="curl -sS -w \"\\n%%{http_code}\\n\" -H '$HEADERS' -H 'Content-Type: application/json' -d '$DATA' 'https://www.strava.com/api/v3/athlete/activities$QUERY_PARAMS'"
+          echo "Executing Command: $CMD"
+          response=$($CMD)        
           # Extract status code and body from the response
           http_status_code=$(tail -n 1 <<< "$response" | cut -d' ' -f1)
           response_body=$(tail -n 1 <<< "$response" | cut -d' ' -f2-)
