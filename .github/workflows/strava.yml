@@ -62,7 +62,7 @@ jobs:
         id: fetch
         run: |
           QUERY_PARAMS="?per_page=1"
-          STRAVA_ACCESS_TOKEN=STRAVA_ACCESS_TOKEN
+          STRAVA_ACCESS_TOKEN=$STRAVA_ACCESS_TOKEN
       
           # Debug: Print the token for debugging purposes
           echo "STRAVA_ACCESS_TOKEN: $STRAVA_ACCESS_TOKEN"
