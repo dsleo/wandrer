@@ -61,32 +61,37 @@ jobs:
       - name: Fetch Latest Activity
         id: fetch
         run: |
-          echo "Access Token: $STRAVA_ACCESS_TOKEN"
-          HEADER_CONTENT_TYPE="Content-Type:application/json"
-          HEADER_AUTHORIZATION="Authorization:Bearer $STRAVA_ACCESS_TOKEN"
-          QUERY_PARAMS="?per_page=1"
-          DATA='{}'
-          if [[ ! -z "${{ github.event.inputs.issue_number }}" ]]; then
-            DATA='{"message":"Retrieved the latest Strava activity","issue_number":{{ github.event.inputs.issue_number }}}'
+          local HEADERS="Content-Type:application/json Authorization:Bearer ${{ secrets.STRAVA_ACCESS_TOKEN }}"
+          local QUERY_PARAMS="?per_page=1"
+          
+          # Check if issue number is provided
+          if [[ -n "${{ github.event.inputs.issue_number }}" ]]; then
+            local DATA='{"message":"Retrieved the latest Strava activity","issue_number":${{ github.event.inputs.issue_number }}}'
+          else
+            local DATA='{}'
           fi
+        
           echo "Running cURL..."
-          RESPONSE=$(curl -sS -w "\n%{http_code}\n" -H "$HEADERS" -d "$DATA" "https://www.strava.com/api/v3/athlete/activities$QUERY_PARAMS")
+          response=$(curl -sS -w "\n%{http_code}\n" -H "$HEADERS" -d "$DATA" "https://www.strava.com/api/v3/athlete/activities$QUERY_PARAMS")
         
-          # Debugging info
+          # Extract status code and body from the response
+          local http_status_code=$(tail -n 1 <<< "$response" | cut -d' ' -f1)
+          local response_body=$(tail -n 1 <<< "$response" | cut -d' ' -f2-)
+        
+          # Display debug information
           echo ""
-          echo "Response Headers: $(head -n -1 <<< "$RESPONSE")"
-          echo "Response Body: $(tail -n 1 <<< "$RESPONSE")"
+          echo "Response Headers: $(head -n -1 <<< "$response")"
+          echo "Response Body: $response_body"
         
-          RESPONSE_LINE="$(tail -n 1 <<< "$RESPONSE")"
-          HTTP_STATUS_CODE="$(echo "$RESPONSE_LINE" | cut -d' ' -f1)"
-          RESPONSE_BODY="$(echo "$RESPONSE_LINE" | cut -d' ' -f2-)"
-        
-          if [[ "$HTTP_STATUS_CODE" != 200 && "$HTTP_STATUS_CODE" != 201 ]]; then
-            echo "::error ::Failed to fetch latest Strava activity. Response: $RESPONSE_BODY"
+          # Validate the response status code
+          if [[ "$http_status_code" != 200 && "$http_status_code" != 201 ]]; then
+            echo "::error ::Failed to fetch latest Strava activity. Response: $response_body"
             exit 1
           fi
         
-          echo "::set-output name=activity_id::$(echo "$RESPONSE_BODY" | awk -F '[:}]+' '{print $NF}')"
+          # Parse activity ID from the JSON response
+          local activity_id=$(echo "$response_body" | awk -F '[:}]+' '{print $NF}')
+          echo "::set-output name=activity_id::$activity_id"
       - name: Post Comment to PR
         if: always()
         uses: actions/github-script@v5
