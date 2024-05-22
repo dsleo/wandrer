@@ -41,13 +41,13 @@ jobs:
         id: auth
         run: |
           AUTHORIZATION="$(printf "%s:%s" "$STRAVA_CLIENT_ID" "$STRAVA_CLIENT_SECRET" | base64)"
-          RESPONSE="$(curl --silent --show-error \
-              -X POST -H "Authorization: Basic $AUTHORIZATION" \
-              -H "Content-Type: application/json" \
-              -d '{"client_id": "'"${STRAVA_CLIENT_ID}"'", "client_secret": "'"${STRAVA_CLIENT_SECRET}"'", "refresh_token": "'"${STRAVA_REFRESH_TOKEN}"'", "grant_type": "refresh_token" }' \
-              https://www.strava.com/api/v3/oauth/token)"
+          RESPONSE=$(curl --silent --show-error -w "\n%{http_code}\n" \
+                -X POST -H "Authorization: Basic $AUTHORIZATION" \
+                -H "Content-Type: application/json" \
+                -d '{"client_id": "'"${STRAVA_CLIENT_ID}"'", "client_secret": "'"${STRAVA_CLIENT_SECRET}"'", "refresh_token": "'"${STRAVA_REFRESH_TOKEN}"'", "grant_type": "refresh_token" }' \
+                https://www.strava.com/api/v3/oauth/token)
 
-          JSON_PAYLOAD=$(echo "$RESPONSE" | sed '$ d')
+          JSON_PAYLOAD=$(echo "${RESPONSE}" | head -n -1)
           STRAVA_ACCESS_TOKEN=$(echo "${JSON_PAYLOAD}" | jq -r '.access_token')
           http_code=$(echo "${RESPONSE}" | tail -n 1)
 
