@@ -62,12 +62,12 @@ jobs:
         id: fetch
         run: |
           QUERY_PARAMS="?per_page=1"
-          HEADERS="Authorization: Bearer $STRAVA_ACCESS_TOKEN"
+          STRAVA_ACCESS_TOKEN=${{ secrets.STRAVA_ACCESS_TOKEN }}
           # Construct the complete CMD
-          CMD="curl -sS -w '\n%{http_code}\n' -H \"$HEADERS\" -H \"Content-Type: application/json\" \"https://www.strava.com/api/v3/athlete/activities$QUERY_PARAMS\""
+          CMD="curl -sS -w '\n%{http_code}\n' -H 'Authorization: Bearer $STRAVA_ACCESS_TOKEN' -H 'Content-Type: application/json' 'https://www.strava.com/api/v3/athlete/activities$QUERY_PARAMS'"
           echo "Executing Command: $CMD"
           echo "Running cURL..."
-          response=$($CMD)
+          response=$(eval $CMD)
           
           http_status_code=$(tail -n 1 <<< "$response" | cut -d' ' -f1)
           response_body=$(head -n -1 <<< "$response")
