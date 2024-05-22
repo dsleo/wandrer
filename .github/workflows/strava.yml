@@ -69,8 +69,9 @@ jobs:
           else
             DATA='{}'
           fi
+          
           HEADERS="Authorization:\x27Bearer $STRAVA_ACCESS_TOKEN\x27"
-
+          echo "HEADERS: $HEADERS"
           # Construct the complete CMD
           CMD="curl -sS -w '\n%%{http_code}\n' -H '$HEADERS' -H 'Content-Type: application/json' -d '$DATA' 'https://www.strava.com/api/v3/athlete/activities$QUERY_PARAMS'"
           echo "Executing Command: $CMD"
