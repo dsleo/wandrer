@@ -1,2 +1,2 @@
-name: strava_access_token
-value: ''
+secrets:
+  STRAVA_ACCESS_TOKEN: ''
