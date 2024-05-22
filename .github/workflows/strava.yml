@@ -70,7 +70,8 @@ jobs:
             DATA='{"message":"Retrieved the latest Strava activity","issue_number":{{ github.event.inputs.issue_number }}}'
           fi
           RESPONSE=$(curl -sS -w "\n%{http_code}\n" "$HEADERS" -H "$HEADER_AUTHORIZATION" -d "$DATA" https://www.strava.com/api/v3/athlete/activities)
-
+        
+          # Rest remains intact
           RESPONSE_LINE="$(tail -n 1 <<< "$RESPONSE")"
           HTTP_STATUS_CODE="$(echo "$RESPONSE_LINE" | cut -d' ' -f1)"
           RESPONSE_BODY="$(echo "$RESPONSE_LINE" | cut -d' ' -f2-)"
