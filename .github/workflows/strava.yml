@@ -43,7 +43,8 @@ jobs:
               exit 1
           fi
           
-          STRAVA_ACCESS_TOKEN="${${response#"access_token":}%?}"
+          tmp="${response#"access_token":}"
+          STRAVA_ACCESS_TOKEN="${tmp%%,*}}"
           STRAVA_ACCESS_TOKEN="${STRAVA_ACCESS_TOKEN%:*}}"
           
           echo "::set-output name=authorization::$STRAVA_ACCESS_TOKEN"
