@@ -101,7 +101,9 @@ jobs:
           STRAVA_ACCESS_TOKEN: $STRAVA_ACCESS_TOKEN
         run: |
           activity_id=${{ steps.fetch.outputs.activity_id }}
-          NEW_DESCRIPTION="Good job!"
+          #NEW_DESCRIPTION="Good job!"
+          NEW_DESCRIPTION=$(python .github/scripts/generate_description.py $activity_id $STRAVA_ACCESS_TOKEN)
+  
   
           # Construct the update command
           CMD="curl -X PUT -H 'Authorization: Bearer $STRAVA_ACCESS_TOKEN' -H 'Content-Type: application/json' -d '{\"description\": \"$NEW_DESCRIPTION\"}' 'https://www.strava.com/api/v3/activities/$activity_id'"
