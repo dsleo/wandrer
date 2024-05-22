@@ -62,17 +62,9 @@ jobs:
         id: fetch
         run: |
           QUERY_PARAMS="?per_page=1"
-        
-          # Check if issue number is provided
-          if [[ -n "${{ github.event.inputs.issue_number }}" ]]; then
-            DATA='{"message":"Retrieved the latest Strava activity","issue_number":${{ github.event.inputs.issue_number }}}'
-          else
-            DATA='{}'
-          fi
-          
           HEADERS="Authorization:\x27Bearer $STRAVA_ACCESS_TOKEN\x27"
           # Construct the complete CMD
-          CMD='curl -sS -w '\''\n%%{http_code}\n'\''' -H "'"$HEADERS"'" -H "Content-Type: application/json" -d "$DATA" "https://www.strava.com/api/v3/athlete/activities'$QUERY_PARAMS'"'
+          CMD='curl -sS -w '\''\n%%{http_code}\n'\''' -H "'"$HEADERS"'" -H "Content-Type: application/json" "https://www.strava.com/api/v3/athlete/activities'$QUERY_PARAMS'"'
           echo "Executing Command: $CMD"
           echo "Running cURL..."
           response=$($CMD)
