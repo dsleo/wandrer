@@ -93,17 +93,19 @@ jobs:
           
           # Parse the activity ID from the JSON response
           activity_id=$(echo "$response_body" | jq -r '.[0].id')
-          
+          echo "activity_id: $activity_id"
           # Set the activity ID output parameter
           echo "::set-output name=activity_id::$activity_id"
-      - name: Post Comment to PR
-        if: always()
+      - name: Comment on Issue
         uses: actions/github-script@v5
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const issueNumber = ${{ github.event.inputs.issue_number }}
-            const activityUrl = "<https://www.strava.com/activities/" + ${{ steps.fetch.outputs.activity_id }} + ">"
-            const commentBody = "Updated Strava activity description with 'Good job!' message. View the updated activity here: " + activityUrl
+            const activityId = '${{ steps.fetch.outputs.activity_id }}';
+            const activityUrl = `https://www.strava.com/activities/${activityId}`;
+            const commentBody = `Updated Strava activity description with 'Good job!' message. View the updated activity here: ${activityUrl}`;
+            const issueNumber = 1;  // Replace with the actual issue number
+            
             await github.issues.createComment({
               issue_number: issueNumber,
               owner: context.repo.owner,
