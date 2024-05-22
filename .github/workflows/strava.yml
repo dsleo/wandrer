@@ -72,7 +72,7 @@ jobs:
           
           HEADERS="Authorization:\x27Bearer $STRAVA_ACCESS_TOKEN\x27"
           # Construct the complete CMD
-          CMD='curl -sS -w '"\'"\n%%{http_code}\n"\'"' -H "'"$HEADERS"'" -H "Content-Type: application/json" -d "$DATA" "https://www.strava.com/api/v3/athlete/activities'$QUERY_PARAMS''"
+          CMD='curl -sS -w '\''\n%%{http_code}\n'\''' -H "'"$HEADERS"'" -H "Content-Type: application/json" -d "$DATA" "https://www.strava.com/api/v3/athlete/activities'$QUERY_PARAMS'"'
           echo "Executing Command: $CMD"
           echo "Running cURL..."
           response=$($CMD)
