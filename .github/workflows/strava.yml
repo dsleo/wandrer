@@ -62,15 +62,15 @@ jobs:
         id: fetch
         run: |
           QUERY_PARAMS="?per_page=1"
-          HEADERS="Authorization:\x27Bearer $STRAVA_ACCESS_TOKEN\x27"
+          HEADERS="Authorization: Bearer $STRAVA_ACCESS_TOKEN"
           # Construct the complete CMD
-          CMD='curl -sS -w '\''\n%%{http_code}\n'\''' -H "'"$HEADERS"'" -H "Content-Type: application/json" "https://www.strava.com/api/v3/athlete/activities'$QUERY_PARAMS'"'
+          CMD="curl -sS -w '\n%{http_code}\n' -H \"$HEADERS\" -H \"Content-Type: application/json\" \"https://www.strava.com/api/v3/athlete/activities$QUERY_PARAMS\""
           echo "Executing Command: $CMD"
           echo "Running cURL..."
           response=$($CMD)
           
           http_status_code=$(tail -n 1 <<< "$response" | cut -d' ' -f1)
-          response_body=$(tail -n 1 <<< "$response" | cut -d' ' -f2-)
+          response_body=$(head -n -1 <<< "$response")
           
           # Display debug information
           echo ""
@@ -86,7 +86,7 @@ jobs:
           fi
           
           # Parse the activity ID from the JSON response
-          activity_id=$(echo "$response_body" | awk -F '[:,}]+' '{print $NF}')
+          activity_id=$(echo "$response_body" | jq -r '.[0].id')
           
           # Set the activity ID output parameter
           echo "::set-output name=activity_id::$activity_id"
