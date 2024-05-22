@@ -61,35 +61,37 @@ jobs:
       - name: Fetch Latest Activity
         id: fetch
         run: |
-          QUERY_PARAMS="?per_page=1"
-          STRAVA_ACCESS_TOKEN=${{ secrets.STRAVA_ACCESS_TOKEN }}
-          # Construct the complete CMD
-          CMD="curl -sS -w '\n%{http_code}\n' -H 'Authorization: Bearer $STRAVA_ACCESS_TOKEN' -H 'Content-Type: application/json' 'https://www.strava.com/api/v3/athlete/activities$QUERY_PARAMS'"
-          echo "Executing Command: $CMD"
-          echo "Running cURL..."
-          response=$(eval $CMD)
-          
-          http_status_code=$(tail -n 1 <<< "$response" | cut -d' ' -f1)
-          response_body=$(head -n -1 <<< "$response")
-          
-          # Display debug information
-          echo ""
-          echo "Response Headers:"
-          head -n -1 <<< "$response"
-          echo "Response Body: $response_body"
-          
-          # Validate the response status code
-          if [[ "$http_status_code" != 200 && "$http_status_code" != 201 ]]; then
-            # Print an error message and exit the script with a failure status code
-            >&2 echo "Failed to fetch latest Strava activity. Response: $response_body"
+          response=$(
+                  curl \
+                    --silent \
+                    --show-error \
+                    --write "<stdout>" "\n%{http_code}\n" \
+                    --header "Authorization: Bearer ${{ secrets.STRAVA_ACCESS_TOKEN }}" \
+                    --header "Content-Type: application/json" \
+                    --data '{"message":"Retrieved the latest Strava activity","issue_number":null}' \
+                    "https://www.strava.com/api/v3/athlete/activities?per_page=1"
+                )
+                
+          # Get the HTTP status code and response body
+          http_status_code=$(tail -n 1 <<< "${response}")
+          response_body=$(sed '$ d' <<< "${response}")
+    
+          echo "##[debug][HTTP Status Code]: ${http_status_code}"
+          echo "##[debug][Response Body]: ${response_body}"
+    
+          # Check if the response indicates success
+          if [[ "${http_status_code}" == @(200|201) ]]; then
+            # Parse the activity ID from the JSON response
+            activity_id=$(echo "${response_body}" | jq '.[] | .id // null') || true
+            
+            # Store the activity ID as an output variable
+            echo "::set-output name=activity_id::$(printf '%s' "${activity_id:-null}")"
+          else
+            # Report an error if the response indicated failure
+            echo "::error ::The action failed with HTTP status code ${http_status_code}. Please review the response body below."
+            echo "##[debug][Response Body]: ${response_body}"
             exit 1
           fi
-          
-          # Parse the activity ID from the JSON response
-          activity_id=$(echo "$response_body" | jq -r '.[0].id')
-          
-          # Set the activity ID output parameter
-          echo "::set-output name=activity_id::$activity_id"
       - name: Post Comment to PR
         if: always()
         uses: actions/github-script@v5
