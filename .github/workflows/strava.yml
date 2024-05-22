@@ -30,18 +30,25 @@ jobs:
       - name: Authenticate with Strava
         id: auth
         run: |
-          AUTHORIZATION=$(echo -ne "$STRAVA_CLIENT_ID:$STRAVA_CLIENT_SECRET" | base64)
-          RESPONSE=$(curl -sS -o /dev/null -w '%{http_code}' \
-            -X POST -H "Authorization: Basic $AUTHORIZATION" \
+          AUTHORIZATION=$(echo -n "${STRAVA_CLIENT_ID}:${STRAVA_CLIENT_SECRET}" | base64)
+          response=$(curl -sS -o /dev/null -w "%{http_code}\n%{stderr}" \
+            -X POST -H "Authorization: Basic ${AUTHORIZATION}" \
             -H "Content-Type: application/json" \
-            -d "{ \"client_id\": \"$STRAVA_CLIENT_ID\", \"client_secret\": \"$STRAVA_CLIENT_SECRET\", \"refresh_token\": \"$STRAVA_REFRESH_TOKEN\", \"grant_type\": \"refresh_token\" }" \
+            -d '{"client_id":"'"${STRAVA_CLIENT_ID}"'", "'"client_secret":"'"${STRAVA_CLIENT_SECRET}"'", "'"refresh_token":"'"${STRAVA_REFRESH_TOKEN}"'", "'"grant_type":"refresh_token""}' \
             https://www.strava.com/api/v3/oauth/token)
-          if [[ $RESPONSE != 200 ]]; then
-            echo "::error ::Failed to authenticate with Strava API"
+          
+          http_status="${response%%$'\n'*}"
+          if (( http_status != 200 )); then
+            echo "::error ::Failed to authenticate with Strava API (HTTP status code: ${http_status})"
             exit 1
           fi
-          STRAVA_ACCESS_TOKEN=$(echo $RESPONSE | awk -F '[:}]+' '{print $NF}')
-          echo "::set-output name=authorization::Bearer $STRAVA_ACCESS_TOKEN"
+          
+          # Extract the access token from the JSON response using jq
+          STRAVA_ACCESS_TOKEN="$(echo "${response#*\"access_token\":\")" | cut -d',' -f1)"
+          STRAVA_ACCESS_TOKEN="${STRAVA_ACCESS_TOKEN##*" : "}"
+          
+          # Set the output variable for use later in the workflow
+          echo "::set-output name=authorization::Bearer ${STRAVA_ACCESS_TOKEN}"
       - name: Fetch Latest Activity
         id: fetch
         run: |
