@@ -96,6 +96,22 @@ jobs:
           echo "activity_id: $activity_id"
           # Set the activity ID output parameter
           echo "::set-output name=activity_id::$activity_id"
+      - name: Update Activity Description
+        env:
+          STRAVA_ACCESS_TOKEN: $STRAVA_ACCESS_TOKEN
+        run: |
+          activity_id=${{ steps.fetch.outputs.activity_id }}
+          NEW_DESCRIPTION="Good job!"
+  
+          # Construct the update command
+          CMD="curl -X PUT -H 'Authorization: Bearer $STRAVA_ACCESS_TOKEN' -H 'Content-Type: application/json' -d '{\"description\": \"$NEW_DESCRIPTION\"}' 'https://www.strava.com/api/v3/activities/$activity_id'"
+          echo "Executing Command: $CMD"
+          echo "Updating Activity Description..."
+  
+          # Execute the update command
+          update_response=$(curl -X PUT -sS -H "Authorization: Bearer $STRAVA_ACCESS_TOKEN" -H "Content-Type: application/json" -d "{\"description\": \"$NEW_DESCRIPTION\"}" "https://www.strava.com/api/v3/activities/$activity_id")
+          echo "Update Response: $update_response"
+      
       - name: Comment on Issue
         uses: actions/github-script@v5
         with:
@@ -106,7 +122,7 @@ jobs:
             const commentBody = `Updated Strava activity description with 'Good job!' message. View the updated activity here: ${activityUrl}`;
             const issueNumber = 1;  // Replace with the actual issue number
             
-            await github.issues.createComment({
+            await github.rest.issues.createComment({
               issue_number: issueNumber,
               owner: context.repo.owner,
               repo: context.repo.repo,
