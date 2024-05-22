@@ -45,8 +45,8 @@ jobs:
               exit 1
           fi
           
-          tmp="${RESPONSE#*\"access_token\":\""}"
-          STRAVA_ACCESS_TOKEN="${tmp%%\",*\}}"
+          tmp="${RESPONSE#*\"access_token\":\"}"
+          STRAVA_ACCESS_TOKEN="${tmp%%\",*}"
           
           echo "STRAVA_ACCESS_TOKEN=$STRAVA_ACCESS_TOKEN" >> "$GITHUB_ENV"
       - name: Fetch Latest Activity
