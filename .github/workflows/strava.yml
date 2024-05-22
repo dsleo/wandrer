@@ -20,6 +20,7 @@ jobs:
       STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
       STRAVA_REFRESH_TOKEN: ${{ secrets.STRAVA_REFRESH_TOKEN }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_PERSONAL_ACCESS_TOKEN }}
+      STRAVA_ACCESS_TOKEN: ${{ env.strava_access_token }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
@@ -47,7 +48,7 @@ jobs:
           STRAVA_ACCESS_TOKEN="${tmp%%,*}}"
           STRAVA_ACCESS_TOKEN="${STRAVA_ACCESS_TOKEN%:*}}"
           
-          echo "::set-output name=authorization::$STRAVA_ACCESS_TOKEN"
+          echo "::set-env name=strava_access_token::$STRAVA_ACCESS_TOKEN"
       - name: Fetch Latest Activity
         id: fetch
         run: |
