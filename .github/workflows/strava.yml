@@ -43,7 +43,7 @@ jobs:
             exit 1
           fi
           
-          STRAVA_ACCESS_TOKEN="$(echo "${response#*\"access_token\":\")" | cut -d',' -f1)"
+          STRAVA_ACCESS_TOKEN="(echo "${response#*&lt;esc>access_token&lt;esc>:&lt;esc>"} | cut -d',' -f1)"
           STRAVA_ACCESS_TOKEN="${STRAVA_ACCESS_TOKEN##*" : "}"
           
           echo "::set-output name=authorization::Bearer $STRAVA_ACCESS_TOKEN"
