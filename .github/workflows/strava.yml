@@ -33,22 +33,30 @@ jobs:
         id: auth
         run: |
           AUTHORIZATION="$(echo -ne "${STRAVA_CLIENT_ID}:${STRAVA_CLIENT_SECRET}" | base64)"
-          RESPONSE="$(curl -sS -o /dev/null -w '%{http_code}' \
+          RESPONSE="$(curl -sS -o /dev/null -w '%{http_code}\n' \
               -X POST -H "Authorization: Basic ${AUTHORIZATION}" \
               -H "Content-Type: application/json" \
               -d '{"client_id": "'"${STRAVA_CLIENT_ID}"'", "client_secret": "'"${STRAVA_CLIENT_SECRET}"'", "refresh_token": "'"${STRAVA_REFRESH_TOKEN}"'", "grant_type": "refresh_token" }' \
               https://www.strava.com/api/v3/oauth/token)"
           
-          http_status=${RESPONSE%%$'\n'}
-          if (( http_status != 200 )); then
+          http_status="${RESPONSE%%[[:space:]]*}"
+          response_body="${RESPONSE#*[[:space:]]}"
+          
+          if [[ "$http_status" != "200" ]]; then
               echo "::error ::Failed to authenticate with Strava API (HTTP status code: ${http_status})"
               exit 1
           fi
           
-          tmp="${RESPONSE#*\"access_token\":\"}"
-          STRAVA_ACCESS_TOKEN="${tmp%%\",*}"
+          start=$(expr index "$response_body" '"access_token":')
+          start=$(($start + 16))
+          end=$(expr index "$response_body" ",")
+          
+          STRAVA_ACCESS_TOKEN="${response_body:$start:$((end-start))}"
+          STRAVA_ACCESS_TOKEN="${STRAVA_ACCESS_TOKEN%,*}"
           
           echo "STRAVA_ACCESS_TOKEN=$STRAVA_ACCESS_TOKEN" >> "$GITHUB_ENV"
+          
+          echo "Access Token: $STRAVA_ACCESS_TOKEN"
       - name: Fetch Latest Activity
         id: fetch
         run: |
