@@ -109,7 +109,7 @@ class Activity:
 
         shared_segments = []
         remainder_segments = []
-        test_list = np.array([[np.deg2rad(lat), np.deg2rad(lon)] for lat, lon in self.midpoints])
+        test_list = np.array([[np.deg2rad(lat), np.deg2rad(lon)] for lat, lon in self.mid])
 
         for idx, test_point in enumerate(test_list):
             ind = tree.query_radius(test_point.reshape(1, -1), r=search_radius)
