@@ -1,0 +1,131 @@
+name: Strava Workflow
+on:
+  schedule:
+    - cron: '*/5 * * * *' # Every 5 minutes
+  repository_dispatch:
+    types: ['strava']
+    inputs:
+      issue_number:
+        required: true
+        type: integer
+jobs:
+  strava:
+    runs-on: ubuntu-latest
+    environment: development
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    env:
+      STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
+      STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
+      STRAVA_REFRESH_TOKEN: ${{ secrets.STRAVA_REFRESH_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_PERSONAL_ACCESS_TOKEN }}
+      STRAVA_ACCESS_TOKEN: ${{ secrets.GITHUB_ENV['STRAVA_ACCESS_TOKEN'] }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+      - name: Download jq binary
+        run: |
+            mkdir -p ~/.local/bin && \
+            curl -LO https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 && \
+            mv jq-linux64 ~/.local/bin/jq && \
+            chmod +x ~/.local/bin/jq
+      - name: Set PATH for jq
+        run: export PATH=~/.local/bin:"$PATH"
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14
+      - name: Authenticate with Strava
+        id: auth
+        run: |
+         AUTHORIZATION="$(printf "%s:%s" "$STRAVA_CLIENT_ID" "$STRAVA_CLIENT_SECRET" | base64)"
+          RESPONSE=$(curl --silent --show-error -w "\n%{http_code}\n" \
+                -X POST -H "Authorization: Basic $AUTHORIZATION" \
+                -H "Content-Type: application/json" \
+                -d '{"client_id": "'"${STRAVA_CLIENT_ID}"'", "client_secret": "'"${STRAVA_CLIENT_SECRET}"'", "refresh_token": "'"${STRAVA_REFRESH_TOKEN}"'", "grant_type": "refresh_token", "scope": "activity:write" }' \
+                https://www.strava.com/api/v3/oauth/token)
+        
+          JSON_PAYLOAD=$(echo "${RESPONSE}" | head -n -1)
+          STRAVA_ACCESS_TOKEN=$(echo "${JSON_PAYLOAD}" | jq -r '.access_token')
+          http_code=$(echo "${RESPONSE}" | tail -n 1)
+        
+          if [[ ${http_code} -ne 200 ]]; then
+              echo "::error ::Failed to authenticate with Strava API (HTTP status code: ${http_code})"
+              exit 1
+          fi
+        
+          echo "STRAVA_ACCESS_TOKEN=${STRAVA_ACCESS_TOKEN}" >> "${GITHUB_ENV}"
+          echo "Access Token: ${STRAVA_ACCESS_TOKEN}"
+      - name: Fetch Latest Activity
+        id: fetch
+        run: |
+          QUERY_PARAMS="?per_page=1"
+          STRAVA_ACCESS_TOKEN=$STRAVA_ACCESS_TOKEN
+      
+          # Debug: Print the token for debugging purposes
+          echo "STRAVA_ACCESS_TOKEN: $STRAVA_ACCESS_TOKEN"
+          
+          # Construct the complete CMD without using eval
+          CMD="curl -sS -w '\n%{http_code}\n' -H \"Authorization: Bearer $STRAVA_ACCESS_TOKEN\" -H \"Content-Type: application/json\" \"https://www.strava.com/api/v3/athlete/activities$QUERY_PARAMS\""
+          echo "Executing Command: $CMD"
+          echo "Running cURL..."
+      
+          # Execute the curl command and capture the output and status code
+          response=$(curl -sS -w '\n%{http_code}\n' -H "Authorization: Bearer $STRAVA_ACCESS_TOKEN" -H "Content-Type: application/json" "https://www.strava.com/api/v3/athlete/activities$QUERY_PARAMS")
+          http_status_code=$(echo "$response" | tail -n 1)
+          response_body=$(echo "$response" | head -n -1)
+          
+          # Display debug information
+          echo ""
+          echo "Response Headers and Body:"
+          echo "$response"
+          echo "Response Body: $response_body"
+          echo "HTTP Status Code: $http_status_code"
+          
+          # Validate the response status code
+          if [[ "$http_status_code" != "200" && "$http_status_code" != "201" ]]; then
+            # Print an error message and exit the script with a failure status code
+            >&2 echo "Failed to fetch latest Strava activity. Response: $response_body"
+            exit 1
+          fi
+          
+          # Parse the activity ID from the JSON response
+          activity_id=$(echo "$response_body" | jq -r '.[0].id')
+          echo "activity_id: $activity_id"
+          # Set the activity ID output parameter
+          echo "::set-output name=activity_id::$activity_id"
+      - name: Update Activity Description
+        env:
+          STRAVA_ACCESS_TOKEN: $STRAVA_ACCESS_TOKEN
+        run: |
+          activity_id=${{ steps.fetch.outputs.activity_id }}
+          NEW_DESCRIPTION=$(python .github/scripts/generate_description.py $activity_id $STRAVA_ACCESS_TOKEN)
+  
+  
+          # Construct the update command
+          CMD="curl -X PUT -H 'Authorization: Bearer $STRAVA_ACCESS_TOKEN' -H 'Content-Type: application/json' -d '{\"description\": \"$NEW_DESCRIPTION\"}' 'https://www.strava.com/api/v3/activities/$activity_id'"
+          echo "Executing Command: $CMD"
+          echo "Updating Activity Description..."
+  
+          # Execute the update command
+          update_response=$(curl -X PUT -sS -H "Authorization: Bearer $STRAVA_ACCESS_TOKEN" -H "Content-Type: application/json" -d "{\"description\": \"$NEW_DESCRIPTION\"}" "https://www.strava.com/api/v3/activities/$activity_id")
+          echo "Update Response: $update_response"
+      
+      - name: Comment on Issue
+        uses: actions/github-script@v5
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const activityId = '${{ steps.fetch.outputs.activity_id }}';
+            const activityUrl = `https://www.strava.com/activities/${activityId}`;
+            const commentBody = `Updated Strava activity description with 'Good job!' message. View the updated activity here: ${activityUrl}`;
+            const issueNumber = 1;  // Replace with the actual issue number
+            
+            await github.rest.issues.createComment({
+              issue_number: issueNumber,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: commentBody
+            });
