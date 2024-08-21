@@ -27,9 +27,7 @@ def sample_coords_by_distance(coords, dists, sampling_interval=500):
             current_distance = dist
     indices.append(len(distances)-1)
     sampled_coords = [coords[idx] for idx in indices]
-    compression_ratio = len(coords) / len(sampled_coords)
-    #print("Number of sampled coordinates:", len(sampled_coords))
-    #print("Compression ratio:", round(compression_ratio, 2))
+    #compression_ratio = len(coords) / len(sampled_coords)
     return sampled_coords
 
 def calculate_midpoint(segment):

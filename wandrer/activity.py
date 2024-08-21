@@ -1,8 +1,5 @@
 import numpy as np
-from stravalib import Client
-from typing import Optional, List, Tuple, NamedTuple, Iterable
-from functools import partial
-from shapely.geometry import LineString
+from typing import Optional, List, Tuple
 from sklearn.neighbors import BallTree
 
 import itertools
